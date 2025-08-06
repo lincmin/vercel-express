@@ -5,7 +5,11 @@ const app = express();
 const fs = require("fs");
 const dayjs = require("dayjs");
 
-const upload = multer({ dest: "./tmp/" }); // 文件暂存本地目录
+// const upload = multer({ dest: "./tmp/" }); // 文件暂存本地目录
+// 配置 multer 的存储方式
+const storage = multer.memoryStorage(); // 或者使用 diskStorage 存储到文件系统
+const upload = multer({ storage: storage });
+
 require("dotenv").config();
 
 const ossClient = new OSS({
@@ -18,7 +22,6 @@ app.get("/", (req, res) => res.send("Hello Express!"));
 app.post("/upload", upload.single("file"), async (req, res) => {
   const file = req.file; // 获取上传的文件
   const cusName = req.body.cusName;
-  console.log("cusName", cusName);
   if (!file) {
     return res.status(400).json({ error: "No file uploaded" });
   }
@@ -36,9 +39,10 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     const result = await ossClient.put(
       `shortcut/${year}/${date}/${fileName}`, // OSS中的文件路径
-      file.path // 本地文件路径
+      //   file.path // 本地文件路径
+      req.file.buffer
     );
-    fs.unlinkSync(file.path);
+    // fs.unlinkSync(file.path);
     res.json({
       url: result.url, // 返回文件的访问URL
       mdName: `![${mdTextName}](${result.url})`,
